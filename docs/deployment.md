@@ -264,64 +264,51 @@ sudo systemctl start ccflare
 
 ## Docker Deployment
 
-> **Important**: Docker files are not included in the repository. The configurations below are examples/templates that you can use as a starting point for creating your own Docker deployment.
+ccflare now ships with a production-ready [`Dockerfile`](../Dockerfile) that runs the server inside
+Docker without any manual wiring. The multi-stage build installs all workspace dependencies with
+Bun 1.2.8, precompiles the React dashboard (`bun run build:dashboard`), and provisions a
+runtime image that:
 
-### Example Dockerfile
+- exposes port 8080 via `bun run server`
+- keeps configuration + SQLite data under `/data` by setting `ccflare_CONFIG_PATH=/data/config/ccflare.json`
+  and `ccflare_DB_PATH=/data/storage/ccflare.db`
+- installs `curl` for the built-in Docker `HEALTHCHECK` (hits `http://127.0.0.1:${PORT}/api/stats`)
+- declares `/data` as a volume so you can persist config when the container restarts.
 
-```dockerfile
-# Multi-stage build for optimal size
-FROM oven/bun:1 AS builder
+### Build the image
 
-WORKDIR /app
-
-# Copy package files
-COPY package.json bun.lockb ./
-COPY apps/ ./apps/
-COPY packages/ ./packages/
-COPY tsconfig.json ./
-
-# Install dependencies and build
-RUN bun install --frozen-lockfile
-RUN bun run build
-RUN cd apps/server && bun build src/server.ts --compile --outfile dist/ccflare-server
-RUN cd apps/cli && bun build src/cli.ts --compile --outfile dist/ccflare-cli
-
-# Runtime stage
-FROM debian:bookworm-slim
-
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create user
-RUN useradd -r -s /bin/false ccflare
-
-# Copy binary and dashboard
-COPY --from=builder /app/apps/tui/dist/ccflare /usr/local/bin/ccflare
-COPY --from=builder /app/packages/dashboard-web/dist /opt/ccflare/dashboard
-
-# Set permissions
-RUN chmod +x /usr/local/bin/ccflare
-
-# Create data directories
-RUN mkdir -p /data /config && chown -R ccflare:ccflare /data /config
-
-USER ccflare
-
-# Environment
-ENV PORT=8080
-ENV ccflare_CONFIG_PATH=/config/ccflare.json
-
-EXPOSE 8080
-
-VOLUME ["/data", "/config"]
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD ["/usr/local/bin/ccflare-server", "health"] || exit 1
-
-ENTRYPOINT ["/usr/local/bin/ccflare", "--serve"]
+```bash
+docker build -t ccflare:latest .
 ```
+
+### Run the container
+
+```bash
+docker run -d \
+  --name ccflare \
+  -p 8080:8080 \
+  -v $(pwd)/ccflare-data:/data \
+  -e PORT=8080 \
+  -e LB_STRATEGY=session \
+  -e LOG_LEVEL=INFO \
+  -e LOG_FORMAT=json \
+  ccflare:latest
+```
+
+The bind mount above creates `./ccflare-data` on the host so both the config file and SQLite
+database survive upgrades. You can override the defaults by setting `ccflare_CONFIG_PATH` or
+`ccflare_DB_PATH` to alternate locations, but `/data` will work out-of-the-box for most setups.
+
+### Runtime configuration
+
+All server environment variables continue to work in Docker. Common overrides include:
+
+- `PORT` – external HTTP port (remember to update `docker run -p` as well)
+- `LB_STRATEGY` – currently `session`
+- `LOG_LEVEL` / `LOG_FORMAT` – tune logging verbosity and output style
+- `CLIENT_ID`, `SESSION_DURATION_MS`, `RETRY_*` – fine-tune runtime behavior
+- `DEFAULT_AGENT_MODEL`, `DATA_RETENTION_DAYS`, `REQUEST_RETENTION_DAYS` – proxy defaults
+- `ccflare_CONFIG_PATH` / `ccflare_DB_PATH` – explicit paths if you do not want to use `/data`
 
 ### Example Docker Compose
 
@@ -331,29 +318,23 @@ version: '3.8'
 services:
   ccflare:
     build: .
+    image: ccflare:latest
     container_name: ccflare
     restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
-      - PORT=8080
-      - LB_STRATEGY=session
-      - LOG_LEVEL=INFO
-      - LOG_FORMAT=json
-      - CLIENT_ID=9d1c250a-e61b-44d9-88ed-5944d1962f5e
-      - SESSION_DURATION_MS=18000000
-      - RETRY_ATTEMPTS=3
-      - RETRY_DELAY_MS=1000
-      - RETRY_BACKOFF=2
+      PORT: 8080
+      LB_STRATEGY: session
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+      CLIENT_ID: 9d1c250a-e61b-44d9-88ed-5944d1962f5e
+      SESSION_DURATION_MS: 18000000
+      RETRY_ATTEMPTS: 3
+      RETRY_DELAY_MS: 1000
+      RETRY_BACKOFF: 2
     volumes:
-      - ./data:/data
-      - ./config:/config
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - ccflare_data:/data
     networks:
       - ccflare-net
 
@@ -373,15 +354,22 @@ services:
     networks:
       - ccflare-net
 
+volumes:
+  ccflare_data:
+
 networks:
   ccflare-net:
     driver: bridge
 ```
 
+> **Tip**: The Dockerfile already defines a health check that uses `curl` to hit `/api/stats`.
+> Compose/Swarm users can rely on that check or provide their own `healthcheck` stanza if they
+> need a different endpoint.
+
 ### Building and Running
 
 ```bash
-# Build the Docker image
+# Build the Docker image (already configured in the repo)
 docker build -t ccflare:latest .
 
 # Run with Docker
@@ -389,14 +377,12 @@ docker run -d \
   --name ccflare \
   -p 8080:8080 \
   -v $(pwd)/data:/data \
-  -v $(pwd)/config:/config \
   -e LB_STRATEGY=session \
   ccflare:latest
 
 # Or use Docker Compose
 docker-compose up -d
 ```
-
 ## Cloudflare Pages (Dashboard Only)
 
 Deploy the dashboard as a static site on Cloudflare Pages while running the API server elsewhere:

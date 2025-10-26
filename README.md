@@ -33,6 +33,28 @@ bun run ccflare
 export ANTHROPIC_BASE_URL=http://localhost:8080
 ```
 
+## Run with Docker
+
+```bash
+# Build the image (ships with dashboard assets prebuilt)
+docker build -t ccflare .
+
+# Start the server inside Docker
+docker run -d \
+  --name ccflare \
+  -p 8080:8080 \
+  -v ccflare_data:/data \
+  -e PORT=8080 \
+  -e LB_STRATEGY=session \
+  ccflare
+```
+
+The container stores configuration and the SQLite database under `/data` (mapped to
+`ccflare_CONFIG_PATH=/data/config/ccflare.json` and `ccflare_DB_PATH=/data/storage/ccflare.db`).
+Mount a volume there (shown above) to persist settings between restarts. See
+[`docs/deployment.md`](docs/deployment.md#docker-deployment) for compose examples
+and advanced options (health checks, reverse proxies, custom networks, etc.).
+
 ## Features
 
 ### 🎯 Intelligent Load Balancing
