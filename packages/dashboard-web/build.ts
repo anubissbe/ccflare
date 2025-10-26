@@ -2,7 +2,29 @@
 import { existsSync } from "node:fs";
 import { rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import plugin from "bun-plugin-tailwind";
+type TailwindPlugin = (typeof import("bun-plugin-tailwind")) extends {
+        default: infer PluginType;
+}
+        ? PluginType
+        : never;
+
+const tailwindPlugin = await import("bun-plugin-tailwind").then<
+        TailwindPlugin | undefined
+>(
+        (module) => module.default,
+        (error: unknown) => {
+                if (error instanceof Error) {
+                        console.warn(
+                                `⚠️  Failed to load bun-plugin-tailwind: ${error.message}. Continuing without Tailwind processing.`,
+                        );
+                } else {
+                        console.warn(
+                                "⚠️  Failed to load bun-plugin-tailwind due to an unknown error. Continuing without Tailwind processing.",
+                        );
+                }
+                return undefined;
+        },
+);
 
 console.log("\n🚀 Building dashboard...\n");
 
@@ -18,10 +40,16 @@ const start = performance.now();
 const entrypoints = ["src/index.html"];
 console.log(`📄 Building dashboard from ${entrypoints[0]}\n`);
 
+const plugins: TailwindPlugin[] = [];
+
+if (tailwindPlugin) {
+        plugins.push(tailwindPlugin);
+}
+
 const result = await Bun.build({
-	entrypoints,
-	outdir,
-	plugins: [plugin],
+        entrypoints,
+        outdir,
+        plugins,
 	minify: true,
 	target: "browser",
 	sourcemap: "linked",
