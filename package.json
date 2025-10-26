@@ -19,7 +19,9 @@
 		"build:tui": "bun run --cwd apps/tui build",
 		"build:lander": "bun run --cwd apps/lander build",
 		"format": "bunx biome format --write .",
-		"lint": "bunx --bun biome check --write --unsafe ."
+		"lint": "bunx --bun biome check --write --unsafe .",
+		"agents:scan": "bun packages/agents/src/scripts/scan-workspaces.ts",
+		"agents:setup": "bun scripts/setup-agents.ts"
 	},
 	"engines": {
 		"bun": ">=1.2.8"

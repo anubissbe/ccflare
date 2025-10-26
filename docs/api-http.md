@@ -686,6 +686,65 @@ List all available workspaces with agent counts.
 curl http://localhost:8080/api/workspaces
 ```
 
+#### POST /api/workspaces
+
+Register one or more workspace paths so ccflare can load agents from them.
+
+**Request:**
+```json
+{
+  "paths": ["/opt/projects/my-app", "/mnt/c/Users/me/project"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "added": 2,
+  "updated": 0,
+  "skipped": 0,
+  "invalidPaths": [],
+  "workspaces": [
+    {
+      "name": "my-app",
+      "path": "/opt/projects/my-app",
+      "agentCount": 6
+    }
+  ]
+}
+```
+
+**Notes:**
+
+- Paths must exist inside the running container. Use `bun run agents:setup` (or add `-v` mounts manually) before calling this endpoint.
+- You can send a single string with `path` or an array with `paths`.
+- Duplicate entries simply refresh the `lastSeen` timestamp; they do not re-import files.
+
+#### One-Time Workspace Scan
+
+If you need to bulk-register every `.claude/agents` directory that already exists on disk (e.g., host-mounted Windows drives), run the bundled scanner once:
+
+```bash
+bun run agents:scan -- /host /mnt/c
+```
+
+- With no arguments the scanner walks the current directory, your home directory, and a platform-aware list of defaults: on Linux/WSL it checks `/workspaces`, `/host`, `/data`, `/mnt/<drive>`, `/host_mnt/<drive>`, etc.; on Windows it automatically iterates every mounted drive letter (`C:\`, `D:\`, …) plus `%USERPROFILE%`.
+- Pass custom roots explicitly (`bun run agents:scan -- /host /mnt/c /data/shared`) or set `AGENT_SCAN_ROOTS="/host,/mnt/c"` (comma/semicolon/newline separated). Use `AGENT_SCAN_EXTRA_ROOTS` to append to the defaults without replacing them.
+- Windows-style paths such as `C:\Projects\Repo` are accepted everywhere; on Linux/WSL the scanner transparently normalizes them to `/mnt/c/Projects/Repo`.
+- Control traversal fan-out via `--max-depth 10` or `AGENT_SCAN_MAX_DEPTH=10`. Set `AGENT_SCAN_INCLUDE_ROOT=true` if you truly want to walk `/`.
+- Every discovered workspace is persisted to `~/.ccflare/workspaces.json`, so the dashboard immediately shows the agents after a single scan (no server restart required).
+
+Example commands:
+
+```powershell
+# PowerShell on Windows – scan C: and D:
+bun run agents:scan -- "C:\Users\me" "D:\labs" --max-depth 6
+
+# WSL / Docker container with Windows drives mounted under /mnt
+AGENT_SCAN_ROOTS="/host,/mnt/c" bun run agents:scan --max-depth 8
+```
+
 ---
 
 ### Logs

@@ -12,6 +12,7 @@ import {
 	createAgentPreferenceUpdateHandler,
 	createAgentsListHandler,
 	createBulkAgentPreferenceUpdateHandler,
+	createWorkspaceRegisterHandler,
 	createWorkspacesListHandler,
 } from "./handlers/agents";
 import { createAgentUpdateHandler } from "./handlers/agents-update";
@@ -74,6 +75,7 @@ export class APIRouter {
 		const oauthCallbackHandler = createOAuthCallbackHandler(dbOps);
 		const agentsHandler = createAgentsListHandler(dbOps);
 		const workspacesHandler = createWorkspacesListHandler();
+		const workspaceRegisterHandler = createWorkspaceRegisterHandler();
 		const requestsStreamHandler = createRequestsStreamHandler();
 		const cleanupHandler = createCleanupHandler(dbOps, config);
 		const compactHandler = createCompactHandler(dbOps);
@@ -148,6 +150,9 @@ export class APIRouter {
 			return bulkHandler(req);
 		});
 		this.handlers.set("GET:/api/workspaces", () => workspacesHandler());
+		this.handlers.set("POST:/api/workspaces", (req) =>
+			workspaceRegisterHandler(req),
+		);
 	}
 
 	/**
