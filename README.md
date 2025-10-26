@@ -70,7 +70,8 @@ bun run agents:scan -- /host /mnt/c --max-depth 8
 
 - The setup script stops `ccflare-dev`, launches a helper container with wide
   mounts, runs the scanner, and restarts `ccflare-dev` with only the discovered
-  bind mounts plus `/data`.
+  bind mounts plus `/data`, while sharing a `ccflare-workspaces` volume that
+  persists `/root/.ccflare/workspaces.json` between restarts.
 - The dashboard now includes a **Register Workspace Paths** card (Agents tab) so
   you can add absolute paths on the fly. Behind the scenes it calls
   `POST /api/workspaces` (documented in [`docs/api-http.md`](docs/api-http.md#post-apiworkspaces)).

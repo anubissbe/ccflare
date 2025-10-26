@@ -44,6 +44,7 @@ Environment variables:
 | `CCFLARE_CONTAINER` | Name for the runtime container (`ccflare-dev` by default). |
 | `CCFLARE_IMAGE` | Image tag to run (`ccflare:latest`). |
 | `CCFLARE_DATA_VOLUME` | Data volume name (`ccflare-data`). |
+| `CCFLARE_WORKSPACES_VOLUME` | Named volume that persists `/root/.ccflare/workspaces.json` (`ccflare-workspaces`). |
 | `AGENT_SCAN_ROOTS` | Extra roots to mount during the scan (comma/semicolon/newline separated). |
 | `AGENT_SCAN_MAX_DEPTH` | Overrides traversal depth. |
 
@@ -59,7 +60,7 @@ The scanner (and later the server) only sees directories that are mounted into t
 | WSL2 | `-v /:/host -v /mnt/c:/mnt/c` so Windows drives are visible as `/mnt/c`. |
 | Windows (Docker Desktop) | `-v C:\\Users\\me\\agents:/windows/agents` for each shared directory. |
 
-After adjusting mounts, either rerun `bun run agents:setup` or call `bun run agents:scan` followed by `POST /api/workspaces` (see below).
+After adjusting mounts, rerun `bun run agents:setup` so the helper container refreshes both the bind mounts and the persisted `/root/.ccflare/workspaces.json` living inside the `ccflare-workspaces` volume. If you prefer to keep the container running, call `bun run agents:scan` followed by `POST /api/workspaces` (see below).
 
 ## Registering Paths from the Dashboard/API
 

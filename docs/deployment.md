@@ -330,12 +330,13 @@ The script performs the following:
 1. Stops any existing `ccflare-dev` container.
 2. Launches a temporary helper container with wide mounts (`/` → `/host`, `/mnt/*`).
 3. Executes the agent scanner to discover every `.claude/agents` directory.
-4. Reads the generated `~/.ccflare/workspaces.json` file to determine the exact paths.
-5. Restarts `ccflare-dev` with mounts only for the discovered workspaces plus the `/data` volume.
+4. Reads the generated `~/.ccflare/workspaces.json` file (persisted inside the `ccflare-workspaces` volume) to determine the exact paths.
+5. Restarts `ccflare-dev` with mounts only for the discovered workspaces, the `/data` volume, and the shared `/root/.ccflare` volume so the registry is immediately available on boot.
 
 If no workspaces are found, the script falls back to the wide mounts so you can run the scanner manually later. You can customize the behavior with environment variables:
 
 - `CCFLARE_CONTAINER`, `CCFLARE_IMAGE`, `CCFLARE_DATA_VOLUME` – override defaults.
+- `CCFLARE_WORKSPACES_VOLUME` – change the named volume that backs `/root/.ccflare` (defaults to `ccflare-workspaces`).
 - `AGENT_SCAN_ROOTS` – comma/semicolon separated list of additional roots to mount during the scan.
 - `AGENT_SCAN_MAX_DEPTH` – change traversal depth (default `8`).
 
