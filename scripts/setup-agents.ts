@@ -23,6 +23,8 @@ const SCAN_CONTAINER = `${RUN_CONTAINER}-scan`;
 const IMAGE = process.env.CCFLARE_IMAGE || "ccflare:latest";
 const PORT = process.env.PORT || "8080";
 const DATA_VOLUME = process.env.CCFLARE_DATA_VOLUME || "ccflare-data";
+const WORKSPACES_VOLUME =
+	process.env.CCFLARE_WORKSPACES_VOLUME || "ccflare-workspaces";
 const MAX_DEPTH = process.env.AGENT_SCAN_MAX_DEPTH || "8";
 const BASE_SCAN_MOUNTS = detectScanMounts();
 const SCAN_ROOTS = BASE_SCAN_MOUNTS.map((m) => m.dest);
@@ -35,8 +37,9 @@ if (BASE_SCAN_MOUNTS.length === 0) {
 }
 
 async function main() {
-	logSection("Ensuring base volume");
+	logSection("Ensuring volumes");
 	runDocker(["volume", "create", DATA_VOLUME], { allowFailure: true });
+	runDocker(["volume", "create", WORKSPACES_VOLUME], { allowFailure: true });
 
 	logSection("Stopping existing containers");
 	stopContainer(RUN_CONTAINER);
@@ -52,6 +55,8 @@ async function main() {
 		"PORT=8080",
 		"-v",
 		`${DATA_VOLUME}:/data`,
+		"-v",
+		`${WORKSPACES_VOLUME}:/root/.ccflare`,
 		...flattenMounts(BASE_SCAN_MOUNTS),
 		IMAGE,
 		"sh",
@@ -114,6 +119,8 @@ async function main() {
 		`PORT=${PORT}`,
 		"-v",
 		`${DATA_VOLUME}:/data`,
+		"-v",
+		`${WORKSPACES_VOLUME}:/root/.ccflare`,
 		...flattenMounts(finalMounts),
 		IMAGE,
 	];
