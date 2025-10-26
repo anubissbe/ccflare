@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
+import { CLAUDE_MODEL_IDS } from "@ccflare/core";
 import { Config } from "@ccflare/config";
 import { Logger } from "@ccflare/logger";
 import {
@@ -22,6 +23,13 @@ const CACHE_TTL_MS = 30 * 1000; // 30 seconds
 const DEFAULT_COLOR = "gray";
 
 const log = new Logger("AgentRegistry");
+
+const MODEL_ALIASES: Record<string, AllowedModel> = {
+        opus: CLAUDE_MODEL_IDS.OPUS_4_1,
+        "opus-plan": CLAUDE_MODEL_IDS.OPUS_PLAN_MODE,
+        sonnet: CLAUDE_MODEL_IDS.SONNET_4_5,
+        haiku: CLAUDE_MODEL_IDS.HAIKU_4_5,
+};
 
 export class AgentRegistry {
 	private cache: AgentCache | null = null;
@@ -120,21 +128,20 @@ export class AgentRegistry {
 			const defaultModel = this.config.getDefaultAgentModel();
 			let model: AllowedModel = defaultModel as AllowedModel;
 
-			// Handle shorthand model names
-			if (data.model) {
-				const modelLower = data.model.toLowerCase();
-				if (modelLower === "opus") {
-					model = ALLOWED_MODELS[0]; // claude-opus-4-20250514
-				} else if (modelLower === "sonnet") {
-					model = ALLOWED_MODELS[1]; // claude-sonnet-4-20250514
-				} else if (this.isValidModel(data.model)) {
-					model = data.model as AllowedModel;
-				} else {
-					log.warn(
-						`Agent file ${filePath} has invalid model: ${data.model}. Using default.`,
-					);
-				}
-			}
+                        // Handle shorthand model names
+                        if (data.model) {
+                                const modelLower = data.model.toLowerCase();
+                                const aliasMatch = MODEL_ALIASES[modelLower];
+                                if (aliasMatch) {
+                                        model = aliasMatch;
+                                } else if (this.isValidModel(data.model)) {
+                                        model = data.model as AllowedModel;
+                                } else {
+                                        log.warn(
+                                                `Agent file ${filePath} has invalid model: ${data.model}. Using default.`,
+                                        );
+                                }
+                        }
 
 			// Parse tools from frontmatter
 			let tools: AgentTool[] | undefined;
