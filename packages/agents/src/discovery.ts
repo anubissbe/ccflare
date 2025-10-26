@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import { CLAUDE_MODEL_IDS } from "@ccflare/core";
 import { Config } from "@ccflare/config";
+import { CLAUDE_MODEL_IDS } from "@ccflare/core";
 import { Logger } from "@ccflare/logger";
 import {
 	type Agent,
@@ -25,10 +25,10 @@ const DEFAULT_COLOR = "gray";
 const log = new Logger("AgentRegistry");
 
 const MODEL_ALIASES: Record<string, AllowedModel> = {
-        opus: CLAUDE_MODEL_IDS.OPUS_4_1,
-        "opus-plan": CLAUDE_MODEL_IDS.OPUS_PLAN_MODE,
-        sonnet: CLAUDE_MODEL_IDS.SONNET_4_5,
-        haiku: CLAUDE_MODEL_IDS.HAIKU_4_5,
+	opus: CLAUDE_MODEL_IDS.OPUS_4_1,
+	"opus-plan": CLAUDE_MODEL_IDS.OPUS_PLAN_MODE,
+	sonnet: CLAUDE_MODEL_IDS.SONNET_4_5,
+	haiku: CLAUDE_MODEL_IDS.HAIKU_4_5,
 };
 
 export class AgentRegistry {
@@ -128,20 +128,20 @@ export class AgentRegistry {
 			const defaultModel = this.config.getDefaultAgentModel();
 			let model: AllowedModel = defaultModel as AllowedModel;
 
-                        // Handle shorthand model names
-                        if (data.model) {
-                                const modelLower = data.model.toLowerCase();
-                                const aliasMatch = MODEL_ALIASES[modelLower];
-                                if (aliasMatch) {
-                                        model = aliasMatch;
-                                } else if (this.isValidModel(data.model)) {
-                                        model = data.model as AllowedModel;
-                                } else {
-                                        log.warn(
-                                                `Agent file ${filePath} has invalid model: ${data.model}. Using default.`,
-                                        );
-                                }
-                        }
+			// Handle shorthand model names
+			if (data.model) {
+				const modelLower = data.model.toLowerCase();
+				const aliasMatch = MODEL_ALIASES[modelLower];
+				if (aliasMatch) {
+					model = aliasMatch;
+				} else if (this.isValidModel(data.model)) {
+					model = data.model as AllowedModel;
+				} else {
+					log.warn(
+						`Agent file ${filePath} has invalid model: ${data.model}. Using default.`,
+					);
+				}
+			}
 
 			// Parse tools from frontmatter
 			let tools: AgentTool[] | undefined;
@@ -299,37 +299,61 @@ export class AgentRegistry {
 
 	// Register a workspace
 	async registerWorkspace(workspacePath: string): Promise<void> {
-		const normalizedPath = resolve(workspacePath);
+		await this.registerWorkspacesBulk([workspacePath]);
+	}
 
-		// Check if this workspace is already registered
-		if (this.workspaces.has(normalizedPath)) {
-			// Update last seen time
-			const workspace = this.workspaces.get(normalizedPath);
-			if (workspace) {
-				workspace.lastSeen = Date.now();
+	async registerWorkspacesBulk(workspacePaths: string[]): Promise<{
+		added: number;
+		updated: number;
+		skipped: number;
+	}> {
+		const normalizedNow = Date.now();
+		let added = 0;
+		let updated = 0;
+		let skipped = 0;
+		const uniquePaths = new Set<string>();
+
+		for (const rawPath of workspacePaths) {
+			if (!rawPath) {
+				skipped++;
+				continue;
 			}
-			return;
+
+			const normalizedPath = resolve(rawPath);
+			if (uniquePaths.has(normalizedPath)) {
+				continue;
+			}
+			uniquePaths.add(normalizedPath);
+
+			if (this.workspaces.has(normalizedPath)) {
+				const workspace = this.workspaces.get(normalizedPath);
+				if (workspace) {
+					workspace.lastSeen = normalizedNow;
+					updated++;
+				}
+				continue;
+			}
+
+			const pathParts = normalizedPath.split("/");
+			const workspaceName = pathParts[pathParts.length - 1] || "workspace";
+
+			const workspace: AgentWorkspace = {
+				path: normalizedPath,
+				name: workspaceName,
+				lastSeen: normalizedNow,
+			};
+
+			this.workspaces.set(normalizedPath, workspace);
+			log.info(`Registered workspace: ${workspaceName} at ${normalizedPath}`);
+			added++;
 		}
 
-		// Extract workspace name from path
-		const pathParts = normalizedPath.split("/");
-		const workspaceName = pathParts[pathParts.length - 1] || "workspace";
+		if (added > 0) {
+			await this.saveWorkspaces();
+			await this.refresh();
+		}
 
-		// Create new workspace entry
-		const workspace: AgentWorkspace = {
-			path: normalizedPath,
-			name: workspaceName,
-			lastSeen: Date.now(),
-		};
-
-		this.workspaces.set(normalizedPath, workspace);
-		log.info(`Registered workspace: ${workspaceName} at ${normalizedPath}`);
-
-		// Save workspaces to disk
-		await this.saveWorkspaces();
-
-		// Refresh to load agents from the new workspace
-		await this.refresh();
+		return { added, updated, skipped };
 	}
 
 	// Get current workspaces

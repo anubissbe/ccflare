@@ -11,11 +11,12 @@ import {
 	RefreshCw,
 	Settings,
 } from "lucide-react";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import {
 	useAgents,
 	useBulkUpdateAgentPreferences,
 	useDefaultAgentModel,
+	useRegisterWorkspace,
 	useSetDefaultAgentModel,
 	useUpdateAgentPreference,
 } from "../hooks/queries";
@@ -38,6 +39,7 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "./ui/dialog";
+import { Input } from "./ui/input";
 import {
 	Select,
 	SelectContent,
@@ -56,12 +58,16 @@ export function AgentsTab() {
 		useDefaultAgentModel();
 	const setDefaultModel = useSetDefaultAgentModel();
 	const bulkUpdatePreferences = useBulkUpdateAgentPreferences();
+	const registerWorkspace = useRegisterWorkspace();
 	const [selectedWorkspace, setSelectedWorkspace] = useState<string | null>(
 		null,
 	);
 	const [bulkUpdateDialogOpen, setBulkUpdateDialogOpen] = useState(false);
 	const [bulkUpdateModel, setBulkUpdateModel] =
 		useState<string>(DEFAULT_AGENT_MODEL);
+	const [workspacePath, setWorkspacePath] = useState("");
+	const [workspaceMessage, setWorkspaceMessage] = useState<string | null>(null);
+	const [workspaceError, setWorkspaceError] = useState<string | null>(null);
 
 	const handleModelChange = (agentId: string, model: string) => {
 		updatePreference.mutate({ agentId, model });
@@ -76,6 +82,39 @@ export function AgentsTab() {
 			onSuccess: (_data) => {
 				setBulkUpdateDialogOpen(false);
 				// You could add a toast notification here
+			},
+		});
+	};
+
+	const handleWorkspaceSubmit = (event: FormEvent) => {
+		event.preventDefault();
+		setWorkspaceMessage(null);
+		setWorkspaceError(null);
+		const trimmed = workspacePath.trim();
+		if (!trimmed) {
+			setWorkspaceError("Path is required");
+			return;
+		}
+		registerWorkspace.mutate([trimmed], {
+			onSuccess: (data) => {
+				if (data.invalidPaths?.length) {
+					setWorkspaceError(
+						`Some paths were invalid: ${data.invalidPaths.join(", ")}`,
+					);
+				} else {
+					setWorkspaceError(null);
+				}
+				setWorkspaceMessage(
+					`Registered ${data.added} workspace$${data.added === 1 ? "" : "s"}`,
+				);
+				setWorkspacePath("");
+			},
+			onError: (error) => {
+				if (error instanceof Error) {
+					setWorkspaceError(error.message);
+				} else {
+					setWorkspaceError("Failed to register workspace");
+				}
 			},
 		});
 	};
@@ -321,6 +360,61 @@ Your system prompt content here...`}
 								</Dialog>
 							</div>
 						</div>
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-base flex items-center gap-2">
+							<FolderOpen className="h-4 w-4" />
+							Register Workspace Paths
+						</CardTitle>
+						<CardDescription>
+							Point ccflare at new projects by adding absolute paths. Ensure the
+							directories are mounted into the container (use `bun run
+							agents:setup`).
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<form className="space-y-4" onSubmit={handleWorkspaceSubmit}>
+							<Input
+								placeholder="/opt/projects/app or /mnt/c/Users/me/project"
+								value={workspacePath}
+								onChange={(event) => setWorkspacePath(event.target.value)}
+								disabled={registerWorkspace.isPending}
+							/>
+							<div className="flex items-center gap-3">
+								<Button
+									type="submit"
+									className="w-fit"
+									disabled={registerWorkspace.isPending}
+								>
+									{registerWorkspace.isPending ? "Adding..." : "Add Path"}
+								</Button>
+								<Button
+									variant="ghost"
+									type="button"
+									onClick={() => {
+										setWorkspacePath("");
+										setWorkspaceMessage(null);
+										setWorkspaceError(null);
+									}}
+								>
+									Clear
+								</Button>
+							</div>
+							{workspaceMessage && (
+								<p className="text-sm text-emerald-600">{workspaceMessage}</p>
+							)}
+							{workspaceError && (
+								<p className="text-sm text-destructive">{workspaceError}</p>
+							)}
+							<p className="text-xs text-muted-foreground">
+								Paths should contain a{" "}
+								<code className="font-mono">.claude/agents</code> folder. Once
+								added, the dashboard refreshes automatically.
+							</p>
+						</form>
 					</CardContent>
 				</Card>
 

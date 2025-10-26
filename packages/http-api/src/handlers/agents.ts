@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { agentRegistry } from "@ccflare/agents";
 import { validateString } from "@ccflare/core";
 import type { DatabaseOperations } from "@ccflare/database";
@@ -108,6 +110,66 @@ export function createWorkspacesListHandler() {
 		} catch (error) {
 			log.error("Error fetching workspaces:", error);
 			return jsonResponse({ error: "Failed to fetch workspaces" }, 500);
+		}
+	};
+}
+
+export function createWorkspaceRegisterHandler() {
+	return async (req: Request): Promise<Response> => {
+		try {
+			const body = await req.json().catch(() => ({}));
+			const pathsInput = Array.isArray(body?.paths)
+				? body.paths
+				: body?.path
+					? [body.path]
+					: [];
+
+			const normalizedPaths = pathsInput
+				.map((p: unknown) => (typeof p === "string" ? p.trim() : ""))
+				.filter(Boolean)
+				.map((p: string) => resolve(p));
+
+			if (normalizedPaths.length === 0) {
+				throw BadRequest("At least one path is required");
+			}
+
+			const invalidPaths: string[] = [];
+			const validPaths = normalizedPaths.filter((path) => {
+				if (existsSync(path)) {
+					return true;
+				}
+				invalidPaths.push(path);
+				return false;
+			});
+
+			if (validPaths.length === 0) {
+				return jsonResponse(
+					{
+						success: false,
+						message: "All provided paths are invalid",
+						invalidPaths,
+					},
+					400,
+				);
+			}
+
+			const result = await agentRegistry.registerWorkspacesBulk(validPaths);
+			const workspaces = agentRegistry.getWorkspaces();
+
+			return jsonResponse({
+				success: true,
+				added: result.added,
+				updated: result.updated,
+				skipped: result.skipped,
+				invalidPaths,
+				workspaces,
+			});
+		} catch (error) {
+			log.error("Error registering workspaces:", error);
+			if (error instanceof HttpError) {
+				return jsonResponse({ error: error.message }, error.status);
+			}
+			return jsonResponse({ error: "Failed to register workspaces" }, 500);
 		}
 	};
 }

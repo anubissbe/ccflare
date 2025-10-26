@@ -216,6 +216,19 @@ class API extends HttpClient {
 		return data.strategy;
 	}
 
+	async registerWorkspaces(paths: string[]): Promise<{
+		success: boolean;
+		added: number;
+		updated: number;
+		skipped: number;
+		invalidPaths: string[];
+	}> {
+		if (!paths.length) {
+			throw new Error("Path is required");
+		}
+		return this.post("/api/workspaces", { paths });
+	}
+
 	async listStrategies(): Promise<string[]> {
 		return this.get<string[]>("/api/strategies");
 	}

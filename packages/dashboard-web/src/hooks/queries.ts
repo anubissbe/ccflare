@@ -180,6 +180,16 @@ export const useUpdateAgent = () => {
 	});
 };
 
+export const useRegisterWorkspace = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (paths: string[]) => api.registerWorkspaces(paths),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.agents() });
+		},
+	});
+};
+
 // Note: Clear logs functionality appears to be removed from the API
 
 // Retention settings

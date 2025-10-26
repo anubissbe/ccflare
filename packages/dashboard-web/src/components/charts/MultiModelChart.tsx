@@ -49,10 +49,10 @@ interface MultiModelChartProps {
 
 // Model-based color palette
 const MODEL_COLORS: Record<string, string> = {
-        "claude-4.5-sonnet": COLORS.purple,
-        "claude-4.5-haiku": COLORS.success,
-        "claude-opus-4.1": COLORS.blue,
-        "claude-opus-plan": COLORS.pink,
+	"claude-4.5-sonnet": COLORS.purple,
+	"claude-4.5-haiku": COLORS.success,
+	"claude-opus-4.1": COLORS.blue,
+	"claude-opus-plan": COLORS.pink,
 };
 
 function getModelColor(model: string, index: number): string {

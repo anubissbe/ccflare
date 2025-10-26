@@ -55,6 +55,28 @@ Mount a volume there (shown above) to persist settings between restarts. See
 [`docs/deployment.md`](docs/deployment.md#docker-deployment) for compose examples
 and advanced options (health checks, reverse proxies, custom networks, etc.).
 
+## Agent Workspaces & Discovery
+
+ccflare loads agents from Markdown files inside `.claude/agents/` folders. To keep
+your container in sync with projects scattered across Linux, WSL, or Windows:
+
+```bash
+# One-time automation: scan, capture workspaces, restart container with minimal mounts
+bun run agents:setup
+
+# Manual scan if you want to keep the container running
+bun run agents:scan -- /host /mnt/c --max-depth 8
+```
+
+- The setup script stops `ccflare-dev`, launches a helper container with wide
+  mounts, runs the scanner, and restarts `ccflare-dev` with only the discovered
+  bind mounts plus `/data`.
+- The dashboard now includes a **Register Workspace Paths** card (Agents tab) so
+  you can add absolute paths on the fly. Behind the scenes it calls
+  `POST /api/workspaces` (documented in [`docs/api-http.md`](docs/api-http.md#post-apiworkspaces)).
+- For more examples (mount tables, environment variables, troubleshooting) see
+  [`docs/agent-workspaces.md`](docs/agent-workspaces.md).
+
 ## Features
 
 ### 🎯 Intelligent Load Balancing

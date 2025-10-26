@@ -299,6 +299,46 @@ The bind mount above creates `./ccflare-data` on the host so both the config fil
 database survive upgrades. You can override the defaults by setting `ccflare_CONFIG_PATH` or
 `ccflare_DB_PATH` to alternate locations, but `/data` will work out-of-the-box for most setups.
 
+### Host mounts for agent discovery (Linux, Windows, WSL)
+
+The agent scanner can only see paths that are mounted into the container. Use the pattern below that matches your environment, then run `docker exec ccflare bun run agents:scan`.
+
+| Host OS | Example `docker run` snippet | Notes |
+|---------|-----------------------------|-------|
+| Native Linux | `-v /:/host` | Exposes the full filesystem under `/host`; combine with more targeted mounts if you prefer (`-v /srv/workspaces:/workspaces`). |
+| WSL2 (Docker Desktop) | `-v /:/host -v /mnt/c:/mnt/c` | `/mnt/c` maps to Windows’ `C:` drive so the scanner can normalize `C:\` paths. Add other drives (`/mnt/d`) as needed. |
+| Windows (PowerShell) | `-v C:\\Users\\me\\agents:/windows/agents` | Docker Desktop for Windows can only mount directories you’ve shared; bind whichever folders contain `.claude/agents`. |
+
+After the container is running with the appropriate mounts:
+
+```bash
+docker exec ccflare bun run agents:scan -- /host /mnt/c
+```
+
+Repeat the scan whenever you add new workspaces on the host.
+
+#### Automated setup
+
+Instead of wiring these steps manually, run the orchestration script:
+
+```bash
+bun run agents:setup
+```
+
+The script performs the following:
+
+1. Stops any existing `ccflare-dev` container.
+2. Launches a temporary helper container with wide mounts (`/` → `/host`, `/mnt/*`).
+3. Executes the agent scanner to discover every `.claude/agents` directory.
+4. Reads the generated `~/.ccflare/workspaces.json` file to determine the exact paths.
+5. Restarts `ccflare-dev` with mounts only for the discovered workspaces plus the `/data` volume.
+
+If no workspaces are found, the script falls back to the wide mounts so you can run the scanner manually later. You can customize the behavior with environment variables:
+
+- `CCFLARE_CONTAINER`, `CCFLARE_IMAGE`, `CCFLARE_DATA_VOLUME` – override defaults.
+- `AGENT_SCAN_ROOTS` – comma/semicolon separated list of additional roots to mount during the scan.
+- `AGENT_SCAN_MAX_DEPTH` – change traversal depth (default `8`).
+
 ### Runtime configuration
 
 All server environment variables continue to work in Docker. Common overrides include:
