@@ -34,60 +34,50 @@ interface ApiResponse {
 
 // Bundled fallback pricing for Anthropic models (dollars per 1M tokens)
 const BUNDLED_PRICING: ApiResponse = {
-	anthropic: {
-		models: {
-			[CLAUDE_MODEL_IDS.HAIKU_3_5]: {
-				id: CLAUDE_MODEL_IDS.HAIKU_3_5,
-				name: MODEL_DISPLAY_NAMES[CLAUDE_MODEL_IDS.HAIKU_3_5],
-				cost: {
-					input: 0.8,
-					output: 4,
-					cache_read: 0.08,
-					cache_write: 1,
-				},
-			},
-			[CLAUDE_MODEL_IDS.SONNET_3_5]: {
-				id: CLAUDE_MODEL_IDS.SONNET_3_5,
-				name: MODEL_DISPLAY_NAMES[CLAUDE_MODEL_IDS.SONNET_3_5],
-				cost: {
-					input: 3,
-					output: 15,
-					cache_read: 0.3,
-					cache_write: 3.75,
-				},
-			},
-			[CLAUDE_MODEL_IDS.SONNET_4]: {
-				id: CLAUDE_MODEL_IDS.SONNET_4,
-				name: MODEL_DISPLAY_NAMES[CLAUDE_MODEL_IDS.SONNET_4],
-				cost: {
-					input: 3,
-					output: 15,
-					cache_read: 0.3,
-					cache_write: 3.75,
-				},
-			},
-			[CLAUDE_MODEL_IDS.OPUS_4]: {
-				id: CLAUDE_MODEL_IDS.OPUS_4,
-				name: MODEL_DISPLAY_NAMES[CLAUDE_MODEL_IDS.OPUS_4],
-				cost: {
-					input: 15,
-					output: 75,
-					cache_read: 1.5,
-					cache_write: 18.75,
-				},
-			},
-			[CLAUDE_MODEL_IDS.OPUS_4_1]: {
-				id: CLAUDE_MODEL_IDS.OPUS_4_1,
-				name: MODEL_DISPLAY_NAMES[CLAUDE_MODEL_IDS.OPUS_4_1],
-				cost: {
-					input: 15,
-					output: 75,
-					cache_read: 1.5,
-					cache_write: 18.75,
-				},
-			},
-		},
-	},
+        anthropic: {
+                models: {
+                        [CLAUDE_MODEL_IDS.HAIKU_4_5]: {
+                                id: CLAUDE_MODEL_IDS.HAIKU_4_5,
+                                name: MODEL_DISPLAY_NAMES[CLAUDE_MODEL_IDS.HAIKU_4_5],
+                                cost: {
+                                        input: 0.8,
+                                        output: 4,
+                                        cache_read: 0.08,
+                                        cache_write: 1,
+                                },
+                        },
+                        [CLAUDE_MODEL_IDS.SONNET_4_5]: {
+                                id: CLAUDE_MODEL_IDS.SONNET_4_5,
+                                name: MODEL_DISPLAY_NAMES[CLAUDE_MODEL_IDS.SONNET_4_5],
+                                cost: {
+                                        input: 3,
+                                        output: 15,
+                                        cache_read: 0.3,
+                                        cache_write: 3.75,
+                                },
+                        },
+                        [CLAUDE_MODEL_IDS.OPUS_4_1]: {
+                                id: CLAUDE_MODEL_IDS.OPUS_4_1,
+                                name: MODEL_DISPLAY_NAMES[CLAUDE_MODEL_IDS.OPUS_4_1],
+                                cost: {
+                                        input: 15,
+                                        output: 75,
+                                        cache_read: 1.5,
+                                        cache_write: 18.75,
+                                },
+                        },
+                        [CLAUDE_MODEL_IDS.OPUS_PLAN_MODE]: {
+                                id: CLAUDE_MODEL_IDS.OPUS_PLAN_MODE,
+                                name: MODEL_DISPLAY_NAMES[CLAUDE_MODEL_IDS.OPUS_PLAN_MODE],
+                                cost: {
+                                        input: 15,
+                                        output: 75,
+                                        cache_read: 1.5,
+                                        cache_write: 18.75,
+                                },
+                        },
+                },
+        },
 };
 
 interface Logger {

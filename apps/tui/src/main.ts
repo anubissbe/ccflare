@@ -182,26 +182,29 @@ Examples:
 		return;
 	}
 
-	if (parsed.setModel) {
-		const config = new Config();
-		// Validate the model
-		const modelMap: Record<string, string> = {
-			"opus-4": CLAUDE_MODEL_IDS.OPUS_4,
-			"sonnet-4": CLAUDE_MODEL_IDS.SONNET_4,
-			"opus-4.1": CLAUDE_MODEL_IDS.OPUS_4_1,
-		};
+        if (parsed.setModel) {
+                const config = new Config();
+                // Validate the model
+                const modelMap: Record<string, string> = {
+                        "sonnet-4.5": CLAUDE_MODEL_IDS.SONNET_4_5,
+                        "opus-4.1": CLAUDE_MODEL_IDS.OPUS_4_1,
+                        "haiku-4.5": CLAUDE_MODEL_IDS.HAIKU_4_5,
+                        "opus-plan": CLAUDE_MODEL_IDS.OPUS_PLAN_MODE,
+                };
 
-		const fullModel = modelMap[parsed.setModel];
-		if (!fullModel) {
-			console.error(`❌ Invalid model: ${parsed.setModel}`);
-			console.error("Valid models: opus-4, sonnet-4");
-			process.exit(1);
-		}
+                const fullModel = modelMap[parsed.setModel];
+                if (!fullModel) {
+                        console.error(`❌ Invalid model: ${parsed.setModel}`);
+                        console.error(
+                                `Valid models: ${Object.keys(modelMap).join(", ")}`,
+                        );
+                        process.exit(1);
+                }
 
-		config.setDefaultAgentModel(fullModel);
-		console.log(`✅ Default agent model set to: ${fullModel}`);
-		return;
-	}
+                config.setDefaultAgentModel(fullModel);
+                console.log(`✅ Default agent model set to: ${fullModel}`);
+                return;
+        }
 
 	// Default: Launch interactive TUI with auto-started server
 	const config = new Config();

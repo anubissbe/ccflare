@@ -65,24 +65,24 @@ function analyzeQueryPerformance(db: Database) {
 			`,
 			params: [],
 		},
-		{
-			name: "P95 response time calculation",
-			query: `
-				WITH ordered_times AS (
-					SELECT 
-						response_time_ms,
-						ROW_NUMBER() OVER (ORDER BY response_time_ms) as row_num,
-						COUNT(*) OVER () as total_count
-					FROM requests 
-					WHERE model = ? AND response_time_ms IS NOT NULL
-				)
-				SELECT response_time_ms as p95_response_time
-				FROM ordered_times
-				WHERE row_num = CAST(CEIL(total_count * 0.95) AS INTEGER)
-				LIMIT 1
-			`,
-			params: ["claude-3-5-sonnet-20241022"],
-		},
+                {
+                        name: "P95 response time calculation",
+                        query: `
+                                WITH ordered_times AS (
+                                        SELECT
+                                                response_time_ms,
+                                                ROW_NUMBER() OVER (ORDER BY response_time_ms) as row_num,
+                                                COUNT(*) OVER () as total_count
+                                        FROM requests
+                                        WHERE model = ? AND response_time_ms IS NOT NULL
+                                )
+                                SELECT response_time_ms as p95_response_time
+                                FROM ordered_times
+                                WHERE row_num = CAST(CEIL(total_count * 0.95) AS INTEGER)
+                                LIMIT 1
+                        `,
+                        params: ["claude-sonnet-4-5-20250107"],
+                },
 	];
 
 	// Run each test query with EXPLAIN QUERY PLAN
